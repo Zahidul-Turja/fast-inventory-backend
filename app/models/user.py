@@ -37,9 +37,9 @@ class User(Base):
     name = Column(String, nullable=False)
     picture = Column(String, nullable=True)
 
-    user_type = Column(Enum(UserType), nullable=True)
+    user_type = Column(Enum(UserType), nullable=True, default=UserType.supplier)
     occupation = Column(String, nullable=True)
-    district = Column(Enum(District), nullable=True, default=District.Dhaka)
+    district = Column(Enum(District), nullable=True)
     address = Column(String, nullable=True)
     tokens = Column(JSON, nullable=True)
     password = Column(String, nullable=True)

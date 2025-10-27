@@ -54,6 +54,12 @@ async def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
 async def verify_otp(request: UserVerifyOTPRequest, db: Session = Depends(get_db)):
     db_otp = db.query(OTP).filter(OTP.email == request.email).first()
     if db_otp and db_otp.otp == request.otp:
-        return {"message": "OTP verified successfully"}
+        db_user = db.query(User).filter(User.email == request.email).first()
+        db_user.verified = True
+        db.commit()
+        db.refresh(db_user)
+        user = UserDetailsResponse.model_validate(db_user, from_attributes=True)
+        # user = UserDetailsResponse.from_orm(db_user)
+        return {"message": "OTP verified successfully", "data": user}
     else:
         return {"message": "Invalid OTP"}
