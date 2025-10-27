@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 # from app.services.auth_service import auth_service
 # from app.utils.user_storage import user_storage
-# from app.repositories import user_repository
+from app.repositories.user_repository import create_user, create_or_update_otp
 from app.schemas.auth import *
 from app.dependencies import get_db
-from app.models.user import User
+from app.models.user import User, OTP
 
 router = APIRouter()
 
@@ -22,3 +22,38 @@ async def test(request: UserCheckRequest, db: Session = Depends(get_db)):
         return {"message": "User exists", "user_exists": True, "data": user}
     else:
         return {"message": "User does not exist", "user_exists": False}
+
+
+@router.post("/register", status_code=status.HTTP_200_OK)
+async def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
+    if user:
+        return {"message": "User already exists"}
+
+    if request.password != request.confirm_password:
+        return {"message": "Password and confirm password do not match"}
+
+    try:
+        user = {
+            "name": request.name,
+            "email": request.email,
+            "password": request.password,
+        }
+        user = create_user(db, user)
+        otp = create_or_update_otp(db, user)
+        return {
+            "message": "User created successfully",
+            "data": {"name": user.name, "email": user.email},
+        }
+    except Exception as e:
+        print(traceback.format_exc())
+        return {"message": str(e)}
+
+
+@router.post("/verify-otp", status_code=status.HTTP_200_OK)
+async def verify_otp(request: UserVerifyOTPRequest, db: Session = Depends(get_db)):
+    db_otp = db.query(OTP).filter(OTP.email == request.email).first()
+    if db_otp and db_otp.otp == request.otp:
+        return {"message": "OTP verified successfully"}
+    else:
+        return {"message": "Invalid OTP"}
