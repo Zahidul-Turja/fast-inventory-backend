@@ -84,7 +84,10 @@ async def verify_otp(request: VerifyOTPSchema, db: Session = Depends(get_db)):
 async def login(credentials: LoginSchema, db: Session = Depends(get_db)):
     user = authenticate_user(db, credentials.email, credentials.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        return JSONResponse(
+            content={"message": "Invalid credentials"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
 
     access_token = create_access_token(
         data={"sub": str(user.id)},
