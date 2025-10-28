@@ -1,4 +1,5 @@
 import traceback
+import random
 
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -22,8 +23,15 @@ from app.core.config import settings
 router = APIRouter()
 
 
+# Test protected route
+@router.get("/protected")
+async def protected_route(current_user: User = Depends(get_current_user)):
+    # current_user is automatically attached, just like request.user in DRF
+    return {"user": current_user.email, "message": "Protected data"}
+
+
 @router.post("/user-exists", status_code=status.HTTP_200_OK)
-async def user_exists(request: CheckUserExistsSchema, db: Session = Depends(get_db)):
+async def user_exists(request: EmailSchema, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email.ilike(request.email)).first()
     if user:
         return {"message": "User exists", "user_exists": True, "data": user}
@@ -98,7 +106,67 @@ async def login(credentials: LoginSchema, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/protected")
-async def protected_route(current_user: User = Depends(get_current_user)):
-    # current_user is automatically attached, just like request.user in DRF
-    return {"user": current_user.email, "message": "Protected data"}
+@router.post("/forgot-password")
+async def forgot_password(request: EmailSchema, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
+    if user:
+        otp = create_or_update_otp(db, user)
+        # send email
+        return JSONResponse(
+            {"message": "OTP sent successfully", "data": {"email": user.email}},
+            status_code=status.HTTP_200_OK,
+        )
+    else:
+        return JSONResponse(
+            {"message": "User does not exist"}, status_code=status.HTTP_404_NOT_FOUND
+        )
+
+
+@router.post("/forgot-password/verify-otp")
+async def forgot_password_verify_otp(
+    request: VerifyOTPSchema, db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
+    if not user:
+        return JSONResponse(
+            {"message": "User does not exist"}, status_code=status.HTTP_404_NOT_FOUND
+        )
+    db_otp = db.query(OTP).filter(OTP.email.ilike(request.email)).first()
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    if db_otp and db_otp.otp == request.otp:
+        db_otp.otp = "".join([str(random.randint(0, 9)) for _ in range(10)])
+        db.commit()
+        db.refresh(db_otp)
+        return JSONResponse(
+            {
+                "message": "OTP verified successfully",
+                "data": {"access_token": access_token},
+            },
+            status_code=status.HTTP_200_OK,
+        )
+    else:
+        return JSONResponse(
+            {"message": "Invalid OTP"}, status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@router.post("/reset-password")
+async def reset_password(
+    request: ResetPasswordSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if request.password != request.confirm_password:
+        return JSONResponse(
+            {"message": "Password and confirm password do not match"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    current_user.set_password(request.password)
+    db.commit()
+    db.refresh(current_user)
+    return JSONResponse(
+        {"message": "Password reset successfully"}, status_code=status.HTTP_200_OK
+    )

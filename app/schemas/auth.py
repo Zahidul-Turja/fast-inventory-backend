@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 
 
-class CheckUserExistsSchema(BaseModel):
+class EmailSchema(BaseModel):
     email: EmailStr
 
 
@@ -20,6 +20,11 @@ class VerifyOTPSchema(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
+
+
+class ResetPasswordSchema(BaseModel):
+    password: str
+    confirm_password: str
 
 
 class UserDetailsResponse(BaseModel):
