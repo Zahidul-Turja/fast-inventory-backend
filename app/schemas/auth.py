@@ -1,20 +1,25 @@
 from pydantic import BaseModel, EmailStr
 
 
-class UserCheckRequest(BaseModel):
+class CheckUserExistsSchema(BaseModel):
     email: EmailStr
 
 
-class UserRegisterRequest(BaseModel):
+class RegisterSchema(BaseModel):
     name: str
     email: EmailStr
     password: str
     confirm_password: str
 
 
-class UserVerifyOTPRequest(BaseModel):
+class VerifyOTPSchema(BaseModel):
     email: EmailStr
     otp: str
+
+
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class UserDetailsResponse(BaseModel):
@@ -29,4 +34,5 @@ class UserDetailsResponse(BaseModel):
     verified: bool
 
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True

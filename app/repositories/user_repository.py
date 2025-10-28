@@ -32,3 +32,12 @@ def create_or_update_otp(db: Session, user: User) -> OTP:
         db.refresh(db_otp)
 
     return db_otp
+
+
+def authenticate_user(db: Session, email: str, password: str) -> User:
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return None
+    if not user.verify_password(password):
+        return None
+    return user
