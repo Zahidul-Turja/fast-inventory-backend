@@ -15,6 +15,7 @@ from app.repositories.user_repository import (
     authenticate_user,
 )
 from app.schemas.auth import *
+from app.schemas.user import UserSchema
 from app.dependencies import get_db
 from app.models.user import User, OTP
 from app.utilities.auth import create_access_token, get_current_user
@@ -94,7 +95,7 @@ async def login(credentials: LoginSchema, db: Session = Depends(get_db)):
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
-    user_res = UserDetailsResponse.model_validate(user, from_attributes=True)
+    user_res = UserSchema.model_validate(user, from_attributes=True)
 
     return JSONResponse(
         content={
