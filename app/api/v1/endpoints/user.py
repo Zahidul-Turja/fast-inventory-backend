@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.utilities.auth import get_current_user
 from app.models.user import User
-from app.schemas.user import UserSchema
+from app.schemas.user_schema import UserSchema
 
 PROFILE_PIC_DIR = "app/static/profile_pics"
 
