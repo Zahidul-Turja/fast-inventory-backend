@@ -6,13 +6,17 @@ from app.core.config import settings
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
+
 
 app = FastAPI(
     title="Fast Inventory",
     description="API for Fast Inventory management system",
     version="1.0.0",
 )
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # CORS middleware
 app.add_middleware(
