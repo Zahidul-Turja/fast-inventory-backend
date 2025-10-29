@@ -1,6 +1,6 @@
 import random
 from sqlalchemy.orm import Session
-from app.models.user import User, OTP
+from app.models.user_model import User, OTP
 from typing import Dict
 
 

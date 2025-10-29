@@ -17,7 +17,7 @@ from app.repositories.user_repository import (
 from app.schemas.auth import *
 from app.schemas.user_schema import UserSchema
 from app.dependencies import get_db
-from app.models.user import User, OTP
+from app.models.user_model import User, OTP
 from app.utilities.auth import create_access_token, get_current_user
 from app.core.config import settings
 
