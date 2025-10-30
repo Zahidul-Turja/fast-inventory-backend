@@ -11,7 +11,7 @@ from app.models.product_model import Product
 from app.utilities.auth import get_current_user
 from app.models.user_model import User
 from app.schemas.product_schema import ProductSchema
-from fastapi_pagination import Page, add_pagination, paginate
+from fastapi_pagination import Page, paginate
 
 PRODUCT_IMAGE_DIR = "app/static/product_images"
 
@@ -92,12 +92,6 @@ async def create_product(
     db.commit()
     db.refresh(product)
 
-    base_url = str(request.base_url).rstrip("/")
-    full_primary = (
-        f"{base_url}{product.primary_image}" if product.primary_image else None
-    )
-    full_images = [f"{base_url}{url}" for url in image_urls]
-
     product_schema = ProductSchema.model_validate(product, from_attributes=True)
 
     return {
@@ -143,38 +137,4 @@ async def get_product(
     return {
         "message": "Product retrieved successfully",
         "data": product_res.to_dict_with_absolute_url(request),
-    }
-
-    base_url = str(request.base_url).rstrip("/")
-    full_primary = (
-        f"{base_url}{product.primary_image}" if product.primary_image else None
-    )
-    image_urls = []
-    if product.images:
-        for img in product.images.split(","):
-            image_urls.append(f"{base_url}{img}")
-
-    return {
-        "message": "Product retrieved successfully",
-        "data": {
-            "id": product.id,
-            "name": product.name,
-            "slug": product.slug,
-            "description": product.description,
-            "price": product.price,
-            "cost_price": product.cost_price,
-            "discount_price": product.discount_price,
-            "primary_image": full_primary,
-            "images": image_urls,
-            "sku": product.sku,
-            "quantity": product.quantity,
-            "min_stock_level": product.min_stock_level,
-            "category": product.category,
-            "subcategory": product.subcategory,
-            "brand": product.brand,
-            "tags": product.tags,
-            "weight": product.weight,
-            "unit": product.unit,
-            "dimensions": product.dimensions,
-        },
     }
