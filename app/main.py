@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
+from fastapi_pagination import add_pagination
 
 
 app = FastAPI(
@@ -15,6 +16,7 @@ app = FastAPI(
     description="API for Fast Inventory management system",
     version="1.0.0",
 )
+add_pagination(app)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

@@ -2,6 +2,7 @@ import os
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, status, Form, File, UploadFile, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from app.models.product_model import Product
 from app.utilities.auth import get_current_user
 from app.models.user_model import User
 from app.schemas.product_schema import ProductSchema
+from fastapi_pagination import Page, add_pagination, paginate
 
 PRODUCT_IMAGE_DIR = "app/static/product_images"
 
@@ -107,6 +109,26 @@ async def create_product(
             "images": full_images,
         },
     }
+
+
+@router.get("/", response_model=Page[ProductSchema])
+async def list_products(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    products = db.query(Product).filter(Product.owner_id == user.id).all()
+    product_schemas = [
+        ProductSchema.model_validate(product, from_attributes=True)
+        for product in products
+    ]
+    response = {
+        "message": "Products retrieved successfully",
+        "data": paginate(product_schemas),
+    }
+    return JSONResponse(
+        content=jsonable_encoder(response), status_code=status.HTTP_200_OK
+    )
 
 
 @router.get("/{product_slug}")
