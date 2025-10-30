@@ -98,16 +98,11 @@ async def create_product(
     )
     full_images = [f"{base_url}{url}" for url in image_urls]
 
+    product_schema = ProductSchema.model_validate(product, from_attributes=True)
+
     return {
         "message": "Product created successfully",
-        "data": {
-            "id": product.id,
-            "name": product.name,
-            "slug": product.slug,
-            "price": product.price,
-            "primary_image": full_primary,
-            "images": full_images,
-        },
+        "data": product_schema.to_dict_with_absolute_url(request),
     }
 
 
