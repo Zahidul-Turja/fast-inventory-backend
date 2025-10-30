@@ -9,6 +9,7 @@ from app.dependencies import get_db
 from app.models.product_model import Product
 from app.utilities.auth import get_current_user
 from app.models.user_model import User
+from app.schemas.product_schema import ProductSchema
 
 PRODUCT_IMAGE_DIR = "app/static/product_images"
 
@@ -104,5 +105,59 @@ async def create_product(
             "price": product.price,
             "primary_image": full_primary,
             "images": full_images,
+        },
+    }
+
+
+@router.get("/{product_slug}")
+async def get_product(
+    product_slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    product = db.query(Product).filter(Product.slug == product_slug).first()
+    if not product:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Product not found"},
+        )
+    product_res = ProductSchema.model_validate(product, from_attributes=True)
+
+    return {
+        "message": "Product retrieved successfully",
+        "data": product_res.to_dict_with_absolute_url(request),
+    }
+
+    base_url = str(request.base_url).rstrip("/")
+    full_primary = (
+        f"{base_url}{product.primary_image}" if product.primary_image else None
+    )
+    image_urls = []
+    if product.images:
+        for img in product.images.split(","):
+            image_urls.append(f"{base_url}{img}")
+
+    return {
+        "message": "Product retrieved successfully",
+        "data": {
+            "id": product.id,
+            "name": product.name,
+            "slug": product.slug,
+            "description": product.description,
+            "price": product.price,
+            "cost_price": product.cost_price,
+            "discount_price": product.discount_price,
+            "primary_image": full_primary,
+            "images": image_urls,
+            "sku": product.sku,
+            "quantity": product.quantity,
+            "min_stock_level": product.min_stock_level,
+            "category": product.category,
+            "subcategory": product.subcategory,
+            "brand": product.brand,
+            "tags": product.tags,
+            "weight": product.weight,
+            "unit": product.unit,
+            "dimensions": product.dimensions,
         },
     }
