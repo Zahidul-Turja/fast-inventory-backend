@@ -4,6 +4,7 @@ import random
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.requests import Request
 from typing import Dict
 from sqlalchemy.orm import Session
 
@@ -35,7 +36,11 @@ async def protected_route(current_user: User = Depends(get_current_user)):
 async def user_exists(request: EmailSchema, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email.ilike(request.email)).first()
     if user:
-        return {"message": "User exists", "user_exists": True, "data": user}
+        return {
+            "message": "User exists",
+            "user_exists": True,
+            "data": {"email": user.email, "name": user.name},
+        }
     else:
         return {"message": "User does not exist", "user_exists": False}
 
@@ -82,8 +87,10 @@ async def verify_otp(request: VerifyOTPSchema, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-async def login(credentials: LoginSchema, db: Session = Depends(get_db)):
-    user = authenticate_user(db, credentials.email, credentials.password)
+async def login(
+    credentials: LoginSchema, request: Request, db: Session = Depends(get_db)
+):
+    user: User = authenticate_user(db, credentials.email, credentials.password)
     if not user:
         return JSONResponse(
             content={"message": "Invalid credentials"},
@@ -103,7 +110,7 @@ async def login(credentials: LoginSchema, db: Session = Depends(get_db)):
             "data": {
                 "access_token": access_token,
                 "token_type": "bearer",
-                "user": user_res.model_dump(),
+                "user": user_res.to_dict_with_absolute_url(request),
             },
         },
         status_code=status.HTTP_200_OK,
