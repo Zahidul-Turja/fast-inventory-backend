@@ -71,6 +71,19 @@ async def register(request: RegisterSchema, db: Session = Depends(get_db)):
         return {"message": str(e)}
 
 
+@router.post("/resend-otp", status_code=status.HTTP_200_OK)
+async def resend_otp(request: EmailSchema, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email.ilike(request.email)).first()
+    if user:
+        otp = create_or_update_otp(db, user)
+        # In a real app, you would send the email here
+        return {"message": "OTP sent successfully", "data": {"email": user.email}}
+    else:
+        return JSONResponse(
+            {"message": "User does not exist"}, status_code=status.HTTP_404_NOT_FOUND
+        )
+
+
 @router.post("/verify-otp", status_code=status.HTTP_200_OK)
 async def verify_otp(request: VerifyOTPSchema, db: Session = Depends(get_db)):
     db_otp = db.query(OTP).filter(OTP.email == request.email).first()
