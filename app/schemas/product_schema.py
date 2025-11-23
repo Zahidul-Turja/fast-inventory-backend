@@ -4,7 +4,9 @@ from app.models.product_model import Product
 
 
 class ProductSchema(BaseModel):
+    id: int
     name: str
+    slug: str
     description: str | None
     price: float
     cost_price: float | None
