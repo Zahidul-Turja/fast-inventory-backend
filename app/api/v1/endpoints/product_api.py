@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.models.product_model import Product
+from app.models.product_model import Product, ProductStatus, ProductCategory
 from app.utilities.auth import get_current_user
 from app.models.user_model import User
 from app.schemas.product_schema import ProductSchema
@@ -16,6 +16,18 @@ from fastapi_pagination import Page, paginate
 PRODUCT_IMAGE_DIR = "app/static/product_images"
 
 router = APIRouter()
+
+
+
+@router.get("/categories")
+async def get_categories():
+    return {"categories": [c.value for c in ProductCategory]}
+
+
+@router.get("/subcategories")
+async def get_subcategories(db: Session = Depends(get_db)):
+    subcategories = db.query(Product.subcategory).distinct().all()
+    return {"subcategories": [s[0] for s in subcategories if s[0]]}
 
 
 @router.post("/")
@@ -38,6 +50,9 @@ async def create_product(
     weight: float = Form(None),
     unit: str = Form(None),
     dimensions: str = Form(None),
+    status: str = Form(ProductStatus.active.value),
+    is_featured: bool = Form(False),
+    is_published: bool = Form(True),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -86,6 +101,9 @@ async def create_product(
         primary_image=primary_image_path,
         images=",".join(image_urls),
         owner_id=user.id,
+        status=ProductStatus(status),
+        is_featured=is_featured,
+        is_published=is_published,
     )
 
     db.add(product)
@@ -184,6 +202,9 @@ async def update_product(
     weight: float = Form(None),
     unit: str = Form(None),
     dimensions: str = Form(None),
+    status: str = Form(None),
+    is_featured: bool = Form(None),
+    is_published: bool = Form(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -231,6 +252,12 @@ async def update_product(
         product.unit = unit
     if dimensions is not None:
         product.dimensions = dimensions
+    if status is not None:
+        product.status = ProductStatus(status)
+    if is_featured is not None:
+        product.is_featured = is_featured
+    if is_published is not None:
+        product.is_published = is_published
 
     # Handle images
     if primary_image:
