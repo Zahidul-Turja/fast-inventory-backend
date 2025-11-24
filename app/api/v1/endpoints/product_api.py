@@ -18,7 +18,6 @@ PRODUCT_IMAGE_DIR = "app/static/product_images"
 router = APIRouter()
 
 
-
 @router.get("/categories")
 async def get_categories():
     return {"categories": [c.value for c in ProductCategory]}
@@ -124,7 +123,12 @@ async def list_products(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    products = db.query(Product).filter(Product.owner_id == user.id).all()
+    products = (
+        db.query(Product)
+        .filter(Product.owner_id == user.id)
+        .order_by(Product.created_at.desc())
+        .all()
+    )
     product_schemas = [
         ProductSchema.model_validate(
             product, from_attributes=True
@@ -160,25 +164,45 @@ async def get_product(
     }
 
 
-@router.get("/public/list", response_model=Page[ProductSchema])
-async def list_public_products(
-    request: Request,
-    db: Session = Depends(get_db),
+@router.get("/public")
+async def get_public_products(
+    page: int = 1,
+    limit: int = 10,
+    category: str = None,
+    min_price: float = None,
+    max_price: float = None,
+    db: Session = Depends(get_db)
 ):
-    products = db.query(Product).filter(Product.is_published == True).all()
-    product_schemas = [
-        ProductSchema.model_validate(
-            product, from_attributes=True
-        ).to_dict_with_absolute_url(request)
-        for product in products
-    ]
-    response = {
-        "message": "Products retrieved successfully",
-        "data": paginate(product_schemas),
+    query = db.query(Product).filter(Product.is_published == True)
+
+    if category:
+        query = query.filter(Product.category == category)
+    
+    if min_price is not None:
+        query = query.filter(Product.price >= min_price)
+    
+    if max_price is not None:
+        query = query.filter(Product.price <= max_price)
+
+    products = query.order_by(Product.created_at.desc()).all()
+    
+    # Pagination manually since we filtered
+    total_items = len(products)
+    total_pages = (total_items + limit - 1) // limit
+    start = (page - 1) * limit
+    end = start + limit
+    paginated_products = products[start:end]
+
+    return {
+        "items": [
+            ProductSchema.model_validate(p, from_attributes=True)
+            for p in paginated_products
+        ],
+        "total": total_items,
+        "page": page,
+        "pages": total_pages,
+        "limit": limit,
     }
-    return JSONResponse(
-        content=jsonable_encoder(response), status_code=status.HTTP_200_OK
-    )
 
 
 @router.put("/{product_slug}")
